@@ -1,22 +1,39 @@
 import os
 from dotenv import load_dotenv
+from db_handler import DatabaseHandler
+from api_handler import test_apis
 
-# Charge les variables du fichier .env
 load_dotenv()
 
-# Récupère les variables d'environnement
-db_host = os.getenv("DB_HOST", "localhost")
-db_port = os.getenv("DB_PORT", "5432")
-db_name = os.getenv("DB_NAME", "velib_db")
-db_user = os.getenv("DB_USER", "postgres")
+print("\n" + "=" * 60)
+print("🚀 VÉLIB DATA ENGINEERING PROJECT")
+print("=" * 60)
 
-print("=" * 50)
-print("🚀 Vélib Data Engineering Project")
-print("=" * 50)
-print(f"✅ Database Host: {db_host}")
-print(f"✅ Database Port: {db_port}")
-print(f"✅ Database Name: {db_name}")
-print(f"✅ Database User: {db_user}")
-print("=" * 50)
-print("Application démarrée avec succès!")
-print("=" * 50)
+# Test 1 : Connexion à la base de données
+print("\n📦 Step 1: Testing Database Connection...")
+print("-" * 60)
+db = DatabaseHandler()
+db.test_connection()
+db.get_tables()
+
+# Test 2 : Test des APIs
+print("\n🌐 Step 2: Testing APIs...")
+print("-" * 60)
+velib_data, weather_data = test_apis()
+
+# Affiche les résultats
+print("\n📊 Results:")
+print("-" * 60)
+if velib_data:
+    print(f"✅ Vélib: {len(velib_data)} stations retrieved")
+else:
+    print("❌ Vélib: No data")
+
+if weather_data:
+    print(f"✅ Weather: Temperature {weather_data.get('temperature_2m')}°C")
+else:
+    print("❌ Weather: No data")
+
+print("=" * 60)
+print("✅ All tests completed!")
+print("=" * 60 + "\n")
