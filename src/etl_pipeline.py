@@ -1,6 +1,5 @@
 from sqlalchemy import text
 from datetime import datetime, timedelta
-import pandas as pd
 
 class ETLPipeline:
     """

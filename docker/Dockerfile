@@ -1,5 +1,5 @@
 # Utilise Python 3.10 comme base
-FROM python:3.10-slim
+FROM python:3.10
 
 # Définit le répertoire de travail dans le conteneur
 WORKDIR /app
@@ -14,4 +14,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Lance l'application
-CMD ["python", "src/main.py"]
+CMD ["python", "src/app.py"]
+
