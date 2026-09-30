@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Vélib Data Engineering</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .stat-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .chart-container h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        canvas {
+            max-height: 300px;
+        }
+        
+        .error {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚴 Vélib Data Dashboard</h1>
+            <p>Influence de la météo sur le parc de Vélib à Paris</p>
+        </header>
+        
+        <div class="stats-grid" id="statsContainer">
+            <div class="loading">Chargement des statistiques...</div>
+        </div>
+        
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3>📊 Température (dernières 24h)</h3>
+                <canvas id="temperatureChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>🚲 Vélos Disponibles (dernières 24h)</h3>
+                <canvas id="bikesChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>💧 Humidité (dernières 24h)</h3>
+                <canvas id="humidityChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>💨 Vitesse du Vent (dernières 24h)</h3>
+                <canvas id="windChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Charger les statistiques
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                const statsHTML = `
+                    <div class="stat-card">
+                        <h3>🌡️ Température moyenne</h3>
+                        <div class="value">${(data.weather.avg_temp || 0).toFixed(1)}°C</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>💧 Humidité moyenne</h3>
+                        <div class="value">${(data.weather.avg_humidity || 0).toFixed(0)}%</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>🚲 Stations Vélib</h3>
+                        <div class="value">${data.velib.total_stations || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>🚴 Vélos en moyenne</h3>
+                        <div class="value">${(data.velib.avg_bikes || 0).toFixed(0)}</div>
+                    </div>
+                `;
+                
+                document.getElementById('statsContainer').innerHTML = statsHTML;
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+        
+        // Charger les données météo
+        async function loadWeatherData() {
+            try {
+                const response = await fetch('/api/weather');
+                const data = await response.json();
+                
+                if (data.length === 0) return;
+                
+                const labels = data.map(d => new Date(d.timestamp).toLocaleTimeString());
+                const temperatures = data.map(d => d.temperature);
+                const humidities = data.map(d => d.humidity);
+                const winds = data.map(d => d.wind_speed);
+                
+                // Graphique température
+                new Chart(document.getElementById('temperatureChart'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Température (°C)',
+                            data: temperatures,
+                            borderColor: '#ff6b6b',
+                            backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+                
+                // Graphique humidité
+                new Chart(document.getElementById('humidityChart'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Humidité (%)',
+                            data: humidities,
+                            borderColor: '#4ecdc4',
+                            backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+                
+                // Graphique vent
+                new Chart(document.getElementById('windChart'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Vitesse du vent (m/s)',
+                            data: winds,
+                            borderColor: '#95e1d3',
+                            backgroundColor: 'rgba(149, 225, 211, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+        
+        // Charger les données Vélib
+        async function loadVelibData() {
+            try {
+                const response = await fetch('/api/velib-status');
+                const data = await response.json();
+                
+                if (data.length === 0) return;
+                
+                const labels = data.map(d => new Date(d.timestamp).toLocaleTimeString());
+                const bikes = data.map(d => d.available_bikes);
+                
+                new Chart(document.getElementById('bikesChart'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Vélos disponibles',
+                            data: bikes,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+        
+        // Charger au démarrage
+        loadStats();
+        loadWeatherData();
+        loadVelibData();
+        
+        // Rafraîchir toutes les 30 secondes
+        setInterval(() => {
+            loadStats();
+            loadWeatherData();
+            loadVelibData();
+        }, 30000);
+    </script>
+</body>
+</html>
